@@ -174,6 +174,11 @@ class Runtime:
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
 
+        config.session_storage.set_uploaded_file_manager(self._uploaded_file_mgr)  # type: ignore
+        config.session_storage.set_message_enqueued_callback(  # type: ignore
+            self._enqueued_some_message
+        )
+
         self._session_mgr = config.session_manager_class(
             session_storage=config.session_storage,
             uploaded_file_manager=self._uploaded_file_mgr,
@@ -558,12 +563,9 @@ class Runtime:
                     return_when=asyncio.FIRST_COMPLETED,
                 )
 
-            # Shut down all AppSessions.
-            for session_info in self._session_mgr.list_sessions():
-                # NOTE: We want to fully shut down sessions when the runtime stops for
-                # now, but this may change in the future if/when our notion of a session
-                # is no longer so tightly coupled to a browser tab.
-                self._session_mgr.close_session(session_info.session.id)
+            # Disconnect all active AppSessions.
+            for session_info in self._session_mgr.list_active_sessions():
+                self._session_mgr.disconnect_session(session_info.session.id)
 
             self._set_state(RuntimeState.STOPPED)
             async_objs.stopped.set_result(None)
