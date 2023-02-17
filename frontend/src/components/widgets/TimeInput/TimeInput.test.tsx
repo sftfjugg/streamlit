@@ -15,7 +15,10 @@
  */
 
 import React from "react"
-import { render, shallow } from "src/lib/test_util"
+import "@testing-library/jest-dom"
+import { fireEvent } from "@testing-library/react"
+import { act } from "react-dom/test-utils"
+import { render } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
@@ -128,51 +131,83 @@ describe("TimeInput widget", () => {
   })
 
   it("sets the widget value on change", () => {
-    // TODO rewrite this test to use React Testing Library only
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
-    const wrapper = shallow(<TimeInput {...props} />)
-    const date = new Date(1995, 10, 10, 12, 8)
 
-    // @ts-ignore
-    wrapper.find(UITimePicker).prop("onChange")(date)
+    const wrapper = render(<TimeInput {...props} />)
+    const timeContainer = wrapper.baseElement.querySelector(
+      ".stTimeInput div > div"
+    )
 
-    expect(wrapper.state("value")).toBe("12:08")
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+    // Change the widget value
+    if (timeContainer) {
+      // Select the time input dropdown
+      fireEvent.click(timeContainer)
+      // Arrow up twice from 12:45 to 12:15 (since step in 15 min intervals)
+      fireEvent.keyDown(timeContainer, { key: "ArrowUp", code: 38 })
+      fireEvent.keyDown(timeContainer, { key: "ArrowUp", code: 38 })
+      // Hit enter to select the new time
+      fireEvent.keyDown(timeContainer, { key: "Enter", code: 13 })
+    }
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      "12:08",
+      "12:15",
       { fromUi: true }
     )
+
+    // BaseWeb buries the display value in a div so we have to dig for it
+    const timeDisplay = wrapper.baseElement.querySelector(
+      ".stTimeInput div > div > div > div"
+    )
+
+    expect(timeDisplay).toHaveAttribute("value", "12:15")
+    expect(timeDisplay).toHaveTextContent("12:15")
   })
 
   it("resets its value when form is cleared", () => {
-    // TODO rewrite this test to use React Testing Library only
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormClearOnSubmit("form", true)
 
     jest.spyOn(props.widgetMgr, "setStringValue")
 
-    const wrapper = shallow(<TimeInput {...props} />)
+    const wrapper = render(<TimeInput {...props} />)
+    const timeContainer = wrapper.baseElement.querySelector(
+      ".stTimeInput div > div"
+    )
 
     // Change the widget value
-    const date = new Date(1995, 10, 10, 12, 8)
-    // @ts-ignore
-    wrapper.find(UITimePicker).prop("onChange")(date)
+    if (timeContainer) {
+      // Select the time input dropdown
+      fireEvent.click(timeContainer)
+      // Arrow up twice from 12:45 to 12:15 (since step in 15 min intervals)
+      fireEvent.keyDown(timeContainer, { key: "ArrowUp", code: 38 })
+      fireEvent.keyDown(timeContainer, { key: "ArrowUp", code: 38 })
+      // Hit enter to select the new time
+      fireEvent.keyDown(timeContainer, { key: "Enter", code: 13 })
+    }
 
-    expect(wrapper.state("value")).toBe("12:08")
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      "12:08",
+      "12:15",
       { fromUi: true }
     )
 
+    // BaseWeb buries the display value in a div so we have to dig for it
+    const timeDisplay = wrapper.baseElement.querySelector(
+      ".stTimeInput div > div > div > div"
+    )
+
+    expect(timeDisplay).toHaveAttribute("value", "12:15")
+    expect(timeDisplay).toHaveTextContent("12:15")
+
     // "Submit" the form
-    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
-    wrapper.update()
+    act(() => {
+      props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(wrapper.state("value")).toBe(props.element.default)
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,
@@ -180,5 +215,12 @@ describe("TimeInput widget", () => {
         fromUi: true,
       }
     )
+
+    const newTimeDisplay = wrapper.baseElement.querySelector(
+      ".stTimeInput div > div > div > div"
+    )
+
+    expect(newTimeDisplay).toHaveAttribute("value", "12:45")
+    expect(newTimeDisplay).toHaveTextContent("12:45")
   })
 })
