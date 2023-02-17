@@ -15,15 +15,13 @@
  */
 
 import React from "react"
-import moment from "moment"
-import { mount, shallow } from "src/lib/test_util"
+import { render, shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TimeInput as TimeInputProto,
 } from "src/autogen/proto"
 
-import { TimePicker as UITimePicker } from "baseui/timepicker"
 import TimeInput, { Props } from "./TimeInput"
 
 const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
@@ -31,6 +29,7 @@ const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
     id: "123",
     label: "Label",
     default: "12:45",
+    step: 900,
     ...elementProps,
   }),
   width: 0,
@@ -44,14 +43,16 @@ const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
 describe("TimeInput widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<TimeInput {...props} />)
-    expect(wrapper).toBeDefined()
+    const rtlResults = render(<TimeInput {...props} />)
+    expect(rtlResults).toBeDefined()
   })
 
   it("shows a label", () => {
     const props = getProps()
-    const wrapper = mount(<TimeInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+    const { container } = render(<TimeInput {...props} />)
+    const labelQS = container.getElementsByTagName("p")
+    expect(labelQS.length).toEqual(1)
+    expect(labelQS[0].textContent).toEqual(props.element.label)
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -60,10 +61,10 @@ describe("TimeInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const wrapper = mount(<TimeInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
-    )
+    const { container } = render(<TimeInput {...props} />)
+    const labelQS = container.querySelector('label[aria-hidden="true"]')
+    expect(labelQS).toBeDefined()
+    expect(getComputedStyle(labelQS as Element).visibility).toEqual("hidden")
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
@@ -72,16 +73,16 @@ describe("TimeInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const wrapper = mount(<TimeInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
-    )
+    const { container } = render(<TimeInput {...props} />)
+    const labelQS = container.querySelector('label[aria-hidden="true"]')
+    expect(labelQS).toBeDefined()
+    expect(getComputedStyle(labelQS as Element).display).toEqual("none")
   })
 
   it("sets widget value on mount", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
-    shallow(<TimeInput {...props} />)
+    render(<TimeInput {...props} />)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
@@ -91,47 +92,43 @@ describe("TimeInput widget", () => {
 
   it("has correct className and style", () => {
     const props = getProps()
-    const wrapper = shallow(<TimeInput {...props} />)
-    const wrappedDiv = wrapper.find("div").first()
-
-    const { className, style } = wrappedDiv.props()
-    // @ts-ignore
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("stTimeInput")
-
-    // @ts-ignore
-    expect(style.width).toBe(getProps().width)
+    const { container } = render(<TimeInput {...props} />)
+    const timeInputQS = container.getElementsByClassName("stTimeInput")
+    expect(timeInputQS.length).toEqual(1)
+    expect(getComputedStyle(timeInputQS[0]).width).toEqual(
+      `${getProps().width}px`
+    )
   })
 
   it("can be disabled", () => {
     const props = getProps()
-    const wrapper = shallow(<TimeInput {...props} />)
-    expect(wrapper.find(UITimePicker).prop("overrides")).toMatchObject({
-      Select: {
-        props: {
-          disabled: props.disabled,
-        },
-      },
-    })
+    const { container } = render(<TimeInput {...props} />)
+    const labelQS = container.querySelector('label[aria-hidden="true"]')
+    expect(labelQS).toBeDefined()
+    expect(getComputedStyle(labelQS as Element).color).toBe("rgb(49, 51, 63)")
   })
 
   it("has the correct default value", () => {
     const props = getProps()
-    const wrapper = shallow(<TimeInput {...props} />)
-    const wrapperValue = wrapper.find(UITimePicker).prop("value")
-
-    // @ts-ignore
-    expect(moment(wrapperValue).format("hh:mm")).toBe("12:45")
+    const { container } = render(<TimeInput {...props} />)
+    const selectQS = container.querySelector('div[data-baseweb="select"]')
+    expect(selectQS).toBeDefined()
+    const valueQS = selectQS?.querySelector('div[value="12:45"]')
+    expect(valueQS).toBeDefined()
+    expect(valueQS?.textContent).toBe("12:45")
   })
 
   it("has a 24 format", () => {
     const props = getProps()
-    const wrapper = shallow(<TimeInput {...props} />)
-    expect(wrapper.find(UITimePicker).prop("format")).toBe("24")
+    const { container } = render(<TimeInput {...props} />)
+    const inputQS = container.querySelector(
+      "input[aria-label='Selected 12:45. Select a time, 24-hour format.']"
+    )
+    expect(inputQS).toBeDefined()
   })
 
   it("sets the widget value on change", () => {
+    // TODO rewrite this test to use React Testing Library only
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TimeInput {...props} />)
@@ -149,6 +146,7 @@ describe("TimeInput widget", () => {
   })
 
   it("resets its value when form is cleared", () => {
+    // TODO rewrite this test to use React Testing Library only
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormClearOnSubmit("form", true)
