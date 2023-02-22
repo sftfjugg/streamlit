@@ -174,6 +174,13 @@ class TimeInput extends PureComponent<Props, State> {
               }),
             },
 
+            SingleValue: {
+              props: {
+                // For easier testing - indicates div that holds the selected time
+                className: "stTimeInput-timeDisplay",
+              },
+            },
+
             Dropdown: {
               style: () => ({
                 paddingTop: 0,

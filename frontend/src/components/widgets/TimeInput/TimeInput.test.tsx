@@ -135,34 +135,29 @@ describe("TimeInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
 
     const wrapper = render(<TimeInput {...props} />)
-    const timeContainer = wrapper.baseElement.querySelector(
-      ".stTimeInput div > div"
+    // Div containing the selected time as a value prop and as text
+    const timeDisplay = wrapper.baseElement.querySelector(
+      ".stTimeInput-timeDisplay"
     )
 
     // Change the widget value
-    if (timeContainer) {
+    if (timeDisplay) {
       // Select the time input dropdown
-      fireEvent.click(timeContainer)
-      // Arrow up twice from 12:45 to 12:15 (since step in 15 min intervals)
-      fireEvent.keyDown(timeContainer, { key: "ArrowUp", code: 38 })
-      fireEvent.keyDown(timeContainer, { key: "ArrowUp", code: 38 })
+      fireEvent.click(timeDisplay)
+      // Arrow up from 12:45 to 12:30 (since step in 15 min intervals)
+      fireEvent.keyDown(timeDisplay, { key: "ArrowUp", code: 38 })
       // Hit enter to select the new time
-      fireEvent.keyDown(timeContainer, { key: "Enter", code: 13 })
+      fireEvent.keyDown(timeDisplay, { key: "Enter", code: 13 })
     }
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      "12:15",
+      "12:30",
       { fromUi: true }
     )
 
-    // BaseWeb buries the display value in a div so we have to dig for it
-    const timeDisplay = wrapper.baseElement.querySelector(
-      ".stTimeInput div > div > div > div"
-    )
-
-    expect(timeDisplay).toHaveAttribute("value", "12:15")
-    expect(timeDisplay).toHaveTextContent("12:15")
+    expect(timeDisplay).toHaveAttribute("value", "12:30")
+    expect(timeDisplay).toHaveTextContent("12:30")
   })
 
   it("resets its value when form is cleared", () => {
@@ -173,34 +168,30 @@ describe("TimeInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
 
     const wrapper = render(<TimeInput {...props} />)
-    const timeContainer = wrapper.baseElement.querySelector(
-      ".stTimeInput div > div"
+    // Div containing the selected time as a value prop and as text
+    const timeDisplay = wrapper.baseElement.querySelector(
+      ".stTimeInput-timeDisplay"
     )
 
     // Change the widget value
-    if (timeContainer) {
+    if (timeDisplay) {
       // Select the time input dropdown
-      fireEvent.click(timeContainer)
-      // Arrow up twice from 12:45 to 12:15 (since step in 15 min intervals)
-      fireEvent.keyDown(timeContainer, { key: "ArrowUp", code: 38 })
-      fireEvent.keyDown(timeContainer, { key: "ArrowUp", code: 38 })
+      fireEvent.click(timeDisplay)
+      // Arrow down twice from 12:45 to 13:15 (since step in 15 min intervals)
+      fireEvent.keyDown(timeDisplay, { key: "ArrowDown", code: 40 })
+      fireEvent.keyDown(timeDisplay, { key: "ArrowDown", code: 40 })
       // Hit enter to select the new time
-      fireEvent.keyDown(timeContainer, { key: "Enter", code: 13 })
+      fireEvent.keyDown(timeDisplay, { key: "Enter", code: 13 })
     }
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      "12:15",
+      "13:15",
       { fromUi: true }
     )
 
-    // BaseWeb buries the display value in a div so we have to dig for it
-    const timeDisplay = wrapper.baseElement.querySelector(
-      ".stTimeInput div > div > div > div"
-    )
-
-    expect(timeDisplay).toHaveAttribute("value", "12:15")
-    expect(timeDisplay).toHaveTextContent("12:15")
+    expect(timeDisplay).toHaveAttribute("value", "13:15")
+    expect(timeDisplay).toHaveTextContent("13:15")
 
     // "Submit" the form
     act(() => {
@@ -216,11 +207,7 @@ describe("TimeInput widget", () => {
       }
     )
 
-    const newTimeDisplay = wrapper.baseElement.querySelector(
-      ".stTimeInput div > div > div > div"
-    )
-
-    expect(newTimeDisplay).toHaveAttribute("value", "12:45")
-    expect(newTimeDisplay).toHaveTextContent("12:45")
+    expect(timeDisplay).toHaveAttribute("value", "12:45")
+    expect(timeDisplay).toHaveTextContent("12:45")
   })
 })
