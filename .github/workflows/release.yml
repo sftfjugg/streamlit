@@ -39,6 +39,8 @@ jobs:
     permissions:
     # Additional permission needed to generate release
       contents: write
+      # Required by "scripts/get_release_branch.py" script
+      pull-requests: read
 
     env:
       # Name of the tag
