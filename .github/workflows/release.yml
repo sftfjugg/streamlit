@@ -37,7 +37,7 @@ jobs:
         shell: bash --login -eo pipefail {0}
 
     permissions:
-    # Additional permission needed to generate release
+      # Additional permission needed to generate release
       contents: write
       # Required by "scripts/get_release_branch.py" script
       pull-requests: read
@@ -47,13 +47,21 @@ jobs:
       GIT_TAG: ${{ github.ref_name }}
       # The owner and repository name
       GH_REPO: ${{ github.repository }}
+      # A branch with constraints files on the basis of which
+      # the tag will be created.
+      CONSTRAINTS_BRANCH: constraints-develop
+      # The name of the tag that contains the constraints files
+      # for the current release
+      CONSTRAINTS_TAG: ${{ github.ref_name }}/constraints
 
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
-          persist-credentials: false
+          # Save the access token to the local git config, so
+          # later git commands can work.
+          persist-credentials: true
           submodules: 'recursive'
           fetch-depth: 2
       - name: Set Python version vars
@@ -129,6 +137,28 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/create_release.py
+
+      - name: Checkout branch "${{ env.CONSTRAINTS_BRANCH }}" to "constraints" directory
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ env.CONSTRAINTS_BRANCH }}
+          # Save the access token to the local git config, so
+          # later git commands can work.
+          persist-credentials: true
+          path: constraints
+      - name: Create a tag with constraint file
+        run: |
+          cd constraints;
+          git config --local user.email "core+streamlitbot-github@streamlit.io"
+          git config --local user.name "Automated GitHub Actions commit"
+          # During this workflow, the Python tests used the constraints file
+          # from the develop branch, so now we can tag the same
+          # files as files for the current release.
+          git tag "${TARGET_TAG}"
+          git push origin "${TARGET_TAG}";
+        env:
+          TARGET_TAG: ${{ env.GIT_TAG }}/constraints
+
       - name: Successful Release Slack Message
         if: ${{ success() }}
         env:
